@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <style>
+        /* .todos{
+            margin: 0 auto;
+        } */
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div style="background-color: rgba(0,0,0,0.4); position: fixed; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; z-index: 9999;" v-show="isLoading">
+            <div class="spinner-border text-light" style="width: 100px; height: 100px" role="status">
+            </div>
+        </div>
+        <div>
+            <div class="row todos p-3 d-flex  align-items-start ">
+                <div class="new-task mt-2 col-7">
+                    <div class="mb-3">
+                        <label for="newTask" class="form-label">Новая задача:</label>
+                        <input type="text" class="form-control" id="newTask" v-model="newTaskName">
+                        <input type="date" class="form-control" v-model="newTaskDT">
+                        <button class="btn btn-primary btn-sm mt-2" @click="addTask" v-show="newTaskName.length > 0" :disabled="!(newTaskName.length > 0 && newTaskDT.length > 0)">Добавить</button>
+                    </div>
+                </div>
+                
+                <div class="tasks-in-work col-6 mt-5">
+                    <h2 :style="{'text-align': tasksInWork.length == 6 ? 'right' : 'left'}">В работе ({{tasksInWork.length}}) :</h2>
+                    <ul class="list-group">
+                        <li class="list-group-item" v-for="(task, taskIndex) in tasksOnPage">
+                            <input type="text" style="color: white" class="form-control mb-3" v-model="task.name" v-if="task.isEdit">
+                            <div v-else><pre>{{ task.name }}</pre></div>
+
+                            <input type="date" class="form-control mb-3" v-model="task.dt" v-if="task.isEdit">
+                            <div v-else> {{ task.dt }} </div>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" @click="editTask(task.id)">
+                                    {{ task.isEdit ? 'Подтвердить' : 'Изменить' }}
+                                </button>
+                                <button class="btn btn-danger btn-sm" :disabled="task.isEdit" @click="deleteTask(task.id)">Удалить</button>
+                                <button class="btn btn-success btn-sm" :disabled="task.isEdit" @click="completeTask(task.id)">Выполнено</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tasks-complete col-6 mt-5">
+                    <h2>Выполненые ({{tasksComplete.length}}):</h2>
+                    <ul class="list-group">
+                        <li class="list-group-item opacity-50" v-for="task in tasksComplete">
+                            <div><del>{{ task.name }}</del></div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="d-flex mt-3 align-items-end" v-if="pageCount > 0">
+                    <div class="me-3">
+                        Перейти к странице:
+                        <div class="d-flex" :class="{'opacity-50': pageCount <= 1}" >
+                            <input type="number" class="form-control" style="width: 100px" v-model="page" :disabled="pageCount <= 1">
+                            <button class="btn btn-primary btn-sm mt-2" @click="goToPage(page)" :disabled="pageCount <= 1">GO</button>
+                        </div>
+
+                    </div>
+                    <nav>
+                        <ul class="pagination m-0" >
+                            <li class="page-item" :class="{disabled: curPage == 1}" v-if="pageCount > 1">
+                                <a class="page-link" @click="goToPage(curPage - 1)">
+                                <span>&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" :class="{active: curPage == page}" v-for="page in pageCount">
+                                <a class="page-link" @click="goToPage(page)">{{ page }}</a>
+                            </li>
+                            <li class="page-item" :class="{disabled: curPage == pageCount}" v-if="pageCount > 1">
+                            <a class="page-link" @click="goToPage(curPage + 1)">
+                                <span>&raquo;</span>
+                            </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            
+            data: {
+                newTaskName: "",
+                newTaskDT: "",
+                perPage: 2,
+                curPage: 1,
+                page: undefined,
+                lastTaskId: 1,
+                tasks: [],
+                isLoading: false,
+            },
+            
+            computed: {
+                tasksInWork(){
+                    return this.tasks.filter(task => task.status == 'inWork')
+                },
+
+                tasksComplete(){
+                    return this.tasks.filter(task => task.status == 'complete')
+                },
+
+                pageCount(){
+                    return Math.ceil(this.tasksInWork.length / this.perPage)
+                },
+
+                tasksOnPage(){
+                    let from = (this.curPage - 1) * this.perPage
+                    let to = this.curPage * this.perPage
+
+                    return this.tasksInWork.slice(from, to)
+                }
+            },
+
+            methods: {
+                load(){
+                    // this.isLoading = true
+
+                    const time = Math.floor(Math.random() * 1000);
+                    setTimeout(() => {
+                        this.isLoading = false
+                    }, time)
+                },
+
+                addTask(){
+                    this.load()
+                    const name = this.newTaskName;
+                    if (name.trim().length > 0 && !isNaN(name.trim()[0])){
+                        this.newTaskName = "";
+                        this.newTaskDT = "";
+                        this.lastTaskId += 1;
+                        return
+                    }
+
+                    this.tasks.push({
+                        name: name,
+                        status: "inWork",
+                        id: `task-${this.lastTaskId}`,
+                        isEdit: false,
+                        dt: this.newTaskDT,
+                    })
+
+                    this.newTaskName = "";
+                    this.newTaskDT = "";
+                    this.lastTaskId += 1;
+                },
+                
+                deleteTask(id){
+                    this.load()
+                    const newTasksList = this.tasks.filter(task => task.id != id)
+                    this.tasks = newTasksList;
+                },
+                
+                completeTask(id){
+                    this.load()
+                    const task = this.tasks.find(task => task.id == id)
+                    if (!task) return
+                    task.status = 'complete'
+                },
+
+                editTask(id){
+                    const task = this.tasks.find(task => task.id == id)
+                    if (!task) return
+                    task.isEdit = !Boolean(task.isEdit)
+                },
+
+                goToPage(page){
+                    this.load()
+                    this.curPage = page
+                }
+            }
+        })
+    </script>
+</body>
+</html>
