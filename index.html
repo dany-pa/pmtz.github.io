@@ -11,6 +11,24 @@
         body{
             overflow-x: hidden;
         }
+
+        .new-task:hover, .tasks-in-work:hover, .tasks-complete:hover{
+            transition: .3s;
+            border-color: #0d6efd!important;
+        }
+
+        .single-task:hover{
+            transition: .3s;
+            background-color: rgba(13,110,253, .1);
+        }
+
+
+        .anim-btn{
+            transition: .3s;
+        }
+        .anim-btn:hover{
+            transform: translateY(-3px);
+        }
     </style>
 </head>
 <body>
@@ -19,72 +37,74 @@
             <div class="spinner-border text-light" style="width: 100px; height: 100px" role="status">
             </div>
         </div>
-        <div>
-            <div class="row todos p-3 d-flex  align-items-start">
-                <div class="new-task mt-2 col-7">
-                    <div class="mb-3">
-                        <label for="newTask" class="form-label">Новая задача:</label>
-                        <input type="text" class="form-control" id="newTask" v-model="newTaskName" @input="isStartAddNewTask = true">
-                        <input type="date" class="form-control" v-model="newTaskDT">
-                        <button class="btn btn-primary btn-sm mt-2" @click="addTask" v-show="isStartAddNewTask">Добавить</button>
+        <div class="row">
+            <div class="col-10 todos p-3 d-flex align-items-start flex-wrap justify-content-around" style="margin: 0 auto;">
+                <div class="mt-2 col-12">
+                    <div class="col-sm-12 col-md-6 col-lg-3 new-task border p-3 rounded" style="margin: 0 auto">
+                        <div class="mb-3">
+                            <label for="newTask" class="form-label">Новая задача:</label>
+                            <input type="text" class="form-control" placeholder="Задача" id="newTask" v-model="newTaskName" @input="isStartAddNewTask = true">
+                            <input type="date" placeholder="Дата" class="form-control" v-model="newTaskDT" style="width: auto">
+                            <button class="btn btn-primary btn-sm mt-2" @click="addTask" v-show="isStartAddNewTask">Добавить</button>
+                        </div>
                     </div>
+                    
                 </div>
                 
-                <div class="tasks-in-work col-6 mt-5">
+                <div class="tasks-in-work col-5 mt-5 border rounded ps-2 pe-2" :class="{'pb-2': tasksInWork.length > 0}">
                     <h2 :style="{'text-align': tasksInWork.length == 6 ? 'right' : 'left'}">В работе ({{tasksInWork.length}}) :</h2>
                     <ul class="list-group">
-                        <li class="list-group-item" v-for="(task, taskIndex) in tasksOnPage">
+                        <li class="list-group-item single-task" v-for="(task, taskIndex) in tasksOnPage">
                             <input type="text" style="color: white" class="form-control mb-3" v-model="task.name" v-if="task.isEdit">
                             <div v-else><pre>{{ task.name }}</pre></div>
 
-                            <input type="date" class="form-control mb-3" v-model="task.dt" v-if="task.isEdit">
+                            <input type="date" class="form-control mb-3" style="width: auto" v-model="task.dt" v-if="task.isEdit">
                             <div v-else> {{ task.dt }} </div>
                             <div>
-                                <button class="btn btn-secondary btn-sm" @click="editTask(task.id)">
+                                <button class="btn btn-secondary btn-sm anim-btn" @click="editTask(task.id)">
                                     {{ task.isEdit ? 'Подтвердить' : 'Изменить' }}
                                 </button>
-                                <button class="btn btn-danger btn-sm" :disabled="task.isEdit" @click="deleteTask(task.id)">Удалить</button>
-                                <button class="btn btn-success btn-sm" :disabled="task.isEdit" @click="completeTask(task.id)">Выполнено</button>
+                                <button class="btn btn-danger btn-sm anim-btn" :disabled="task.isEdit" @click="deleteTask(task.id)">Удалить</button>
+                                <button class="btn btn-success btn-sm anim-btn" :disabled="task.isEdit" @click="completeTask(task.id)">Выполнено</button>
                             </div>
                         </li>
                     </ul>
+                    <div class="d-flex mt-3 align-items-end" style="margin-right: auto" v-if="pageCount > 1">
+                        <div class="me-3">
+                            Перейти к странице:
+                            <div class="d-flex align-items-center" :class="{'opacity-50': pageCount <= 1}" >
+                                <input type="number" class="form-control" style="width: 100px" v-model="page" :disabled="pageCount <= 1">
+                                <button class="btn btn-primary btn-sm ms-1" @click="goToPage(page)" :disabled="pageCount <= 1">GO</button>
+                            </div>
+    
+                        </div>
+                        <nav>
+                            <ul class="pagination m-0" >
+                                <li class="page-item" :class="{disabled: curPage == 1}" v-if="pageCount > 1">
+                                    <a class="page-link" @click="goToPage(curPage - 1)">
+                                    <span>&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item" :class="{active: curPage == page}" v-for="page in pageCount">
+                                    <a class="page-link" @click="goToPage(page)">{{ page }}</a>
+                                </li>
+                                <li class="page-item" :class="{disabled: curPage == pageCount}" v-if="pageCount > 1">
+                                    <a class="page-link" @click="goToPage(curPage + 1)">
+                                        <span>&raquo;</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
 
-                <div class="tasks-complete col-6 mt-5">
+                <div class="tasks-complete col-5 mt-5 border rounded ps-2 pe-2" :class="{'pb-2': tasksComplete.length > 0}">
                     <h2>Выполненые ({{tasksComplete.length}}):</h2>
                     <ul class="list-group">
                         <li class="list-group-item opacity-50" v-for="task in tasksComplete">
                             <div><del>{{ task.name }}</del></div>
                         </li>
                     </ul>
-                </div>
-
-                <div class="d-flex mt-3 align-items-end" v-if="pageCount > 1">
-                    <div class="me-3">
-                        Перейти к странице:
-                        <div class="d-flex align-items-center" :class="{'opacity-50': pageCount <= 1}" >
-                            <input type="number" class="form-control" style="width: 100px" v-model="page" :disabled="pageCount <= 1">
-                            <button class="btn btn-primary btn-sm ms-1" @click="goToPage(page)" :disabled="pageCount <= 1">GO</button>
-                        </div>
-
-                    </div>
-                    <nav>
-                        <ul class="pagination m-0" >
-                            <li class="page-item" :class="{disabled: curPage == 1}" v-if="pageCount > 1">
-                                <a class="page-link" @click="goToPage(curPage - 1)">
-                                <span>&laquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item" :class="{active: curPage == page}" v-for="page in pageCount">
-                                <a class="page-link" @click="goToPage(page)">{{ page }}</a>
-                            </li>
-                            <li class="page-item" :class="{disabled: curPage == pageCount}" v-if="pageCount > 1">
-                                <a class="page-link" @click="goToPage(curPage + 1)">
-                                    <span>&raquo;</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
                 </div>
             </div>
         </div>
